@@ -1,15 +1,33 @@
-use std::collections::HashMap;
-use uuid::Uuid;
+mod entity_registry;
 
-struct EntityRegistry {
-    map: HashMap<Uuid, HashMap<String, PlanningValue>> //entityUUID, PlanningVariableName, planning value
+trait Phase{
+    fn do_phase(self);
 }
 
-enum PlanningValue {
-    String(String),
-    Int(i32),
-    Double(f64),
-    Id(Uuid, String) //references other entity through the lookup system (entityUUID, String)
+struct SolverScope{}
+struct PhaseScope{
+    solver_scope: SolverScope
+}
+impl PhaseScope {
+    fn new(scope: SolverScope) -> PhaseScope{
+        PhaseScope{solver_scope: scope}
+    }
+}
+struct StepScope{
+    phase_scope: PhaseScope
+}
+impl StepScope {
+    fn new(scope: PhaseScope) -> StepScope{
+        StepScope{phase_scope: scope}
+    }
+}
+struct MoveScope{
+    step_scope: StepScope
+}
+impl MoveScope {
+    fn new(scope: StepScope) -> MoveScope{
+        MoveScope{step_scope: scope}
+    }
 }
 
 #[cfg(test)]
