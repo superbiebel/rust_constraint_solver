@@ -1,11 +1,12 @@
 [package]
 name = "rust_constraint_solver"
-version = "0.1.0"
+version = "0.0.0-INDEV"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+rand_chacha = "0.3.1"
 [dependencies.uuid]
 version = "1.1.2"
 features = [
