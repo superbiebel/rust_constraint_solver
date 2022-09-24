@@ -2,7 +2,6 @@ mod score;
 pub mod score_impl;
 
 pub mod rsolver {
-    use std::borrow::Borrow;
     use rand_chacha::ChaCha8Rng;
     use rand_chacha::rand_core::SeedableRng;
     use uuid::Uuid;
@@ -19,7 +18,7 @@ pub mod rsolver {
         fn get_undo_move(&self, solution: &SolutionType) -> Box<dyn ExecutableMove<SolutionType, ScoreType>>;
         fn is_doable(&self, solution: &SolutionType) -> bool;
         fn do_move(&self, solution: &mut SolutionType) -> Option<Box<dyn ExecutableMove<SolutionType, ScoreType>>> {
-            if (!self.is_doable(solution)) {
+            if !self.is_doable(solution) {
                 return None
             }
             Some(self.do_move_unchecked(solution))
@@ -75,6 +74,7 @@ pub mod rsolver {
     pub struct SolverScope<'a, SolutionType, ScoreType> {
         pub thread_rng: ChaCha8Rng,
         pub config: &'a SolverConfig<SolutionType, ScoreType>,
+        pub score_director: Box<dyn ScoreDirector<SolutionType, ScoreType>>
     }
 
     pub struct PhaseScope<'a, 'b, SolutionType, ScoreType> {
