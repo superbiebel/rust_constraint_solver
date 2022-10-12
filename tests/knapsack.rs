@@ -2,25 +2,11 @@ use rand::prelude::StdRng;
 use rand_chacha::ChaCha8Rng;
 use rand_chacha::rand_core::{RngCore, SeedableRng};
 use uuid::Uuid;
-use rust_constraint_solver::rsolver::{ExecutableMove, MoveSelector, Phase, PhaseConfig, PhaseScope, Selector, Solution, SolverScope, StepScope};
+use rust_constraint_solver::solver::{ExecutableMove, MoveSelector, Phase, PhaseConfig, PhaseScope, Selector, Solution, SolverScope, StepScope};
 use rust_constraint_solver::score_impl::hard_soft_int_score::HardSoftIntScore;
 
 #[test]
 fn knapsack_test() {
-
-    struct HillClimbingPhase {
-        phase_config: PhaseConfig<KnapSackSolution, HardSoftIntScore>
-    }
-    impl Phase<KnapSackSolution, HardSoftIntScore> for HillClimbingPhase {
-        fn do_phase(&self, solution: &mut KnapSackSolution, solver_scope: &mut SolverScope<KnapSackSolution, HardSoftIntScore>) {
-            let mut phase_scope = PhaseScope {
-                solver_scope,
-            };
-            let moves = self.phase_config.move_selector.get_vec(10, solution, StepScope {
-                phase_scope: &mut phase_scope
-            });
-        }
-    }
 
     let item1 = KnapsackItem {
         weight: 1,
@@ -43,11 +29,27 @@ fn knapsack_test() {
         in_knapsack: false
     };
 
+
+    struct HillClimbingPhase {
+        phase_config: PhaseConfig<KnapSackSolution, HardSoftIntScore>
+    }
+    impl Phase<KnapSackSolution, HardSoftIntScore> for HillClimbingPhase {
+        fn do_phase(&self, solver_scope: &mut SolverScope<SolutionType, ScoreType>) {
+            let mut phase_scope = PhaseScope {
+                solver_scope,
+            };
+            let mut step_scope = StepScope {
+                phase_scope: &mut phase_scope
+            };
+            let moves = self.phase_config.move_selector.get_vec(10, &phase_scope.solver_scope.score_director.get_current_solution(), &step_scope);
+        }
+    }
+
     struct KnapsackMoveSelector;
     impl MoveSelector<KnapSackSolution, HardSoftIntScore> for KnapsackMoveSelector {}
 
     impl Selector<KnapSackSolution, dyn ExecutableMove<KnapSackSolution, HardSoftIntScore>, HardSoftIntScore> for KnapsackMoveSelector {
-        fn get_vec(&self, max_amount: u32, solution: &KnapSackSolution, step_scope: StepScope<'_, '_, '_, KnapSackSolution, HardSoftIntScore>) -> Vec<Box<dyn ExecutableMove<KnapSackSolution, HardSoftIntScore>>> {
+        fn get_vec(&self, max_amount: u32, solution: &KnapSackSolution, step_scope: StepScope<'_, '_, SolutionType, ScoreType, >) -> Vec<Box<dyn ExecutableMove<KnapSackSolution, HardSoftIntScore>>> {
             let mut vector: Vec<Box<dyn ExecutableMove<KnapSackSolution, HardSoftIntScore>>> = Vec::new();
             let element = Box::new(RandomFlipKnapsackMove {
                 index: step_scope.phase_scope.solver_scope.thread_rng.next_u32(),
@@ -78,7 +80,7 @@ fn knapsack_test() {
     }
     impl ExecutableMove<KnapSackSolution, HardSoftIntScore> for RandomFlipKnapsackMove {
         fn do_move_unchecked(&self, solution: &mut KnapSackSolution) -> Box<dyn ExecutableMove<KnapSackSolution, HardSoftIntScore>> {
-            let item:&mut KnapsackItem = solution.items.get_mut(self.index as usize).unwrap();
+            let item:&mut KnapsackItem = solution.items.get_mut(&self.index as usize).unwrap();
             if item.in_knapsack {
                 item.in_knapsack = false;
             } else {
@@ -89,12 +91,12 @@ fn knapsack_test() {
 
         fn get_undo_move(&self, solution: &KnapSackSolution) -> Box<dyn ExecutableMove<KnapSackSolution, HardSoftIntScore>> {
             Box::new(RandomFlipKnapsackMove {
-                index: self.index,
+                index: self.index.clone(),
             })
         }
 
         fn is_doable(&self, solution: &KnapSackSolution) -> bool {
-            solution.items.get(self.index as usize).is_some()
+            solution.items.get(&self.index as usize).is_some()
         }
     }
 }
